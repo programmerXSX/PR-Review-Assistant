@@ -6,7 +6,8 @@
       "Bash(\"e:/LLM/PR_Review_Assistant/.venv/Scripts/python.exe\" -c \"import pydantic; print\\('pydantic OK'\\)\")",
       "Bash(uv pip *)",
       "Bash(.venv/Scripts/python.exe -c ' *)",
-      "Bash(.venv/Scripts/python.exe ai-pr-review/backend/github_client.py)"
+      "Bash(.venv/Scripts/python.exe ai-pr-review/backend/github_client.py)",
+      "Bash(.venv/Scripts/python.exe ai-pr-review/backend/context_builder.py)"
     ]
   }
 }

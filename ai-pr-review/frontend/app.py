@@ -1,10 +1,19 @@
 """AI PR Review Assistant — Streamlit 前端。
 
-启动命令:
+启动方式（先激活 venv）:
+
+    # 在项目根目录执行:
+    .venv/Scripts/activate
+    cd ai-pr-review
     streamlit run frontend/app.py
 
+    # 或不用 activate，直接用 venv 里的 python:
+    ../.venv/Scripts/python.exe -m streamlit run frontend/app.py
+
 依赖:
-    - 后端 FastAPI 服务需先在 localhost:8000 启动
+    - 后端需先在另一个终端启动:
+      cd ai-pr-review
+      uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
     - 配置见 ../.env（BACKEND_URL、REQUEST_TIMEOUT_SEC）
 """
 
@@ -12,7 +21,6 @@ from __future__ import annotations
 
 import json
 import os
-import sys
 from pathlib import Path
 
 import requests
@@ -24,7 +32,6 @@ import streamlit as st
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 _ENV_PATH = _PROJECT_ROOT / ".env"
 if _ENV_PATH.exists():
-    # 简单行解析，避免引入 python-dotenv 依赖（前端保持最简）
     _env_vars: dict[str, str] = {}
     with open(_ENV_PATH, encoding="utf-8") as f:
         for line in f:
@@ -119,12 +126,20 @@ def _render_pr_info(resp: dict) -> None:
     col_a.caption(f"模型: {stats.get('model', '—')}  |  估算 tokens: {stats.get('est_input_tokens', '—')}")
     col_b.caption(f"Skipped: {stats.get('skipped_files', 0)} 个文件仅保留 diff")
 
-    # Warnings
+    # Warnings — 重要警告始终展示，非关键信息折叠
     warnings = resp.get("warnings", [])
     if warnings:
-        with st.expander(f"⚠️ 处理警告 ({len(warnings)} 条)", expanded=False):
-            for w in warnings:
-                st.warning(w)
+        # 关键类警告（截断/预算/解析失败/重试）在顶部直接展示
+        critical_keywords = ["文件数超上限", "token 接近上限", "解析失败", "重试", "调用失败"]
+        critical_warns = [w for w in warnings if any(k in w for k in critical_keywords)]
+        info_warns = [w for w in warnings if w not in critical_warns]
+
+        for w in critical_warns:
+            st.warning(f"⚠️ {w}")
+        if info_warns:
+            with st.expander(f"ℹ️ 处理信息 ({len(info_warns)} 条)", expanded=False):
+                for w in info_warns:
+                    st.info(w)
 
     # 变更文件清单
     if files:
@@ -296,8 +311,10 @@ def main() -> None:
             st.error(
                 f"❌ 无法连接到后端服务 ({BACKEND_URL})。\n\n"
                 f"请确认:\n"
-                f"1. 后端已启动: `uvicorn backend.main:app --reload`\n"
-                f"2. BACKEND_URL 配置正确（当前: {BACKEND_URL}）"
+                f"1. venv 已激活: `.venv/Scripts/activate` (Windows)\n"
+                f"2. 已在 ai-pr-review/ 目录下启动后端:\n"
+                f"   `uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000`\n"
+                f"3. BACKEND_URL 配置正确（当前: {BACKEND_URL}）"
             )
             return
         except requests.exceptions.Timeout:

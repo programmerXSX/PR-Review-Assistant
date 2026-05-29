@@ -11,14 +11,7 @@
 from __future__ import annotations
 
 import asyncio
-import sys
 import time
-from pathlib import Path
-
-# 确保 from backend.xxx 导入在任何运行方式下都可用
-_PROJECT_ROOT = str(Path(__file__).resolve().parent.parent)
-if _PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, _PROJECT_ROOT)
 
 from backend.aggregator import parse_findings
 from backend.config import get_settings
@@ -119,15 +112,14 @@ async def run_review(req: ReviewRequest) -> ReviewResponse:
                 findings_raw2 = await loop.run_in_executor(None, _retry_findings)
                 findings2, parse_warnings2 = parse_findings(findings_raw2)
                 findings = findings2
-                warnings.extend(parse_warnings2)
 
                 _has_parse_failure2 = any("解析失败" in w for w in parse_warnings2)
                 if len(findings) == 0 and _has_parse_failure2:
                     warnings.append("findings 重试后仍解析失败，已降级为空 findings")
                 elif len(findings) > 0:
-                    warnings.append(
-                        f"findings 重试成功，解析到 {len(findings)} 条"
-                    )
+                    # 重试成功 — 移除首次解析失败的 warning，只追加二次的校验 warning
+                    warnings = [w for w in warnings if "解析失败" not in w]
+                    warnings.extend(parse_warnings2)
             except Exception as e:
                 warnings.append(f"findings 重试调用失败: {e}，已降级为空 findings")
 

@@ -105,6 +105,8 @@ class GitHubClient:
         resp = self._request("GET", path)
         data = resp.json()
         return {
+            "owner": owner,
+            "repo": repo,
             "title": data.get("title", ""),
             "body": data.get("body", "") or "",
             "author": (data.get("user") or {}).get("login", "unknown"),

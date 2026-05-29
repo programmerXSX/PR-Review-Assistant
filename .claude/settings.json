@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(.venv/Scripts/pip list *)",
+      "Bash(\"e:/LLM/PR_Review_Assistant/.venv/Scripts/python.exe\" -c \"import dotenv; print\\('dotenv OK'\\)\")",
+      "Bash(\"e:/LLM/PR_Review_Assistant/.venv/Scripts/python.exe\" -c \"import pydantic; print\\('pydantic OK'\\)\")",
+      "Bash(uv pip *)",
+      "Bash(.venv/Scripts/python.exe -c ' *)"
+    ]
+  }
+}

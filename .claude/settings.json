@@ -11,7 +11,8 @@
       "WebSearch",
       "WebFetch(domain:api-docs.deepseek.com)",
       "Bash(.venv/Scripts/python.exe ai-pr-review/backend/llm_client.py)",
-      "Bash(.venv/Scripts/python.exe ai-pr-review/backend/orchestrator.py)"
+      "Bash(.venv/Scripts/python.exe ai-pr-review/backend/orchestrator.py)",
+      "Bash(.venv/Scripts/python.exe ai-pr-review/backend/aggregator.py)"
     ]
   }
 }

@@ -2,13 +2,15 @@
 
 提供:
     run_review(req: ReviewRequest) -> ReviewResponse   (async)
+
+重试逻辑:
+    - 趟二 findings 解析失败（返回空 + 解析 warning）时，自动重试一次趟二 LLM 调用。
+    - 重试仍失败则降级为空 findings + warning，不阻塞整次请求。
 """
 
 from __future__ import annotations
 
 import asyncio
-import json
-import re
 import sys
 import time
 from pathlib import Path
@@ -18,95 +20,13 @@ _PROJECT_ROOT = str(Path(__file__).resolve().parent.parent)
 if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
+from backend.aggregator import parse_findings
 from backend.config import get_settings
 from backend.context_builder import build_context
 from backend.github_client import GitHubClient, GitHubAPIError, parse_pr_url
 from backend.llm_client import call_model, LLMError
 from backend.models import Finding, ReviewRequest, ReviewResponse
 from backend.prompts import FINDINGS_SYSTEM, SUMMARY_SYSTEM
-
-
-# ======================================================================
-# 轻量 findings JSON 解析（P8 aggregator 会完全接管此逻辑）
-# ======================================================================
-
-_JSON_BLOCK_RE = re.compile(r"```(?:json)?\s*(.*?)\s*```", re.DOTALL)
-_SEVERITY_RANK = {"high": 0, "medium": 1, "low": 2}
-_CONFIDENCE_RANK = {"high": 0, "medium": 1, "low": 2}
-
-
-def _parse_findings_raw(raw: str) -> list[Finding]:
-    """从 LLM 原始输出中提取并校验 findings 列表。
-
-    容错策略:
-        1. 先尝试直接 JSON.parse 整个 raw。
-        2. 失败则尝试匹配 Markdown 代码块内容。
-        3. 再失败则尝试在 raw 中定位首个 '{' 到最后一个 '}' 的子串。
-        4. 仍失败则降级为空列表 + warning 交由上层记录。
-
-    Returns:
-        校验通过并排序后的 Finding 列表。
-    """
-    candidates: list[str] = []
-
-    # 策略 1: 直接解析
-    candidates.append(raw.strip())
-
-    # 策略 2: 匹配 ```json ... ``` 或 ``` ... ```
-    m = _JSON_BLOCK_RE.search(raw)
-    if m:
-        candidates.append(m.group(1).strip())
-
-    # 策略 3: 寻找首尾花括号
-    start = raw.find("{")
-    end = raw.rfind("}")
-    if start != -1 and end != -1 and end > start:
-        candidates.append(raw[start : end + 1].strip())
-
-    findings_raw_list: list[dict] = []
-    for cand in candidates:
-        try:
-            obj = json.loads(cand)
-            if isinstance(obj, dict) and "findings" in obj:
-                findings_raw_list = obj["findings"]
-                break
-            # 也可能直接是 findings 数组
-            if isinstance(obj, list):
-                findings_raw_list = obj
-                break
-        except json.JSONDecodeError:
-            continue
-
-    # 逐条校验
-    findings: list[Finding] = []
-    for item in findings_raw_list:
-        if not isinstance(item, dict):
-            continue
-        try:
-            f = Finding(**item)
-            findings.append(f)
-        except Exception:
-            # 单条解析失败则跳过
-            continue
-
-    # 简单去重: 同 (file, category, title) 只保留首条
-    seen: set[tuple[str, str, str]] = set()
-    deduped: list[Finding] = []
-    for f in findings:
-        key = (f.file, f.category, f.title)
-        if key not in seen:
-            seen.add(key)
-            deduped.append(f)
-
-    # 排序: severity 降序 → confidence 降序
-    deduped.sort(
-        key=lambda f: (
-            _SEVERITY_RANK.get(f.severity, 3),
-            _CONFIDENCE_RANK.get(f.confidence, 3),
-        )
-    )
-
-    return deduped
 
 
 # ======================================================================
@@ -170,15 +90,46 @@ async def run_review(req: ReviewRequest) -> ReviewResponse:
         raise LLMError(f"变更总结调用失败: {results[0]}") from results[0]
     summary: str = results[0]
 
-    # 处理趟二结果
+    # 处理趟二结果（含解析失败重试逻辑）
+    MAX_FINDINGS_RETRIES = 1  # 首次 + 1 次重试 = 共 2 次
     findings: list[Finding] = []
+    findings_raw: str | None = None
+
     if isinstance(results[1], Exception):
-        warnings.append(f"风险识别调用失败: {results[1]}，已降级为空 findings")
+        warnings.append(
+            f"风险识别调用失败: {results[1]}，已降级为空 findings"
+        )
     else:
-        try:
-            findings = _parse_findings_raw(results[1])
-        except Exception as e:
-            warnings.append(f"findings JSON 解析失败: {e}，已降级为空 findings")
+        findings_raw = results[1]
+        findings, parse_warnings = parse_findings(findings_raw)
+        warnings.extend(parse_warnings)
+
+        # 如果解析完全失败（返回空 + 有解析失败 warning），重试一次
+        _has_parse_failure = any("解析失败" in w for w in parse_warnings)
+        if len(findings) == 0 and _has_parse_failure and MAX_FINDINGS_RETRIES > 0:
+            warnings.append("findings 首次解析失败，正在重试趟二 LLM 调用…")
+
+            def _retry_findings() -> str:
+                return call_model(
+                    FINDINGS_SYSTEM, context_text,
+                    thinking=req.thinking_findings, json_mode=True,
+                )
+
+            try:
+                findings_raw2 = await loop.run_in_executor(None, _retry_findings)
+                findings2, parse_warnings2 = parse_findings(findings_raw2)
+                findings = findings2
+                warnings.extend(parse_warnings2)
+
+                _has_parse_failure2 = any("解析失败" in w for w in parse_warnings2)
+                if len(findings) == 0 and _has_parse_failure2:
+                    warnings.append("findings 重试后仍解析失败，已降级为空 findings")
+                elif len(findings) > 0:
+                    warnings.append(
+                        f"findings 重试成功，解析到 {len(findings)} 条"
+                    )
+            except Exception as e:
+                warnings.append(f"findings 重试调用失败: {e}，已降级为空 findings")
 
     # ---- Step 4: 组装统计 ----
     analyzed = sum(1 for fm in file_metas if fm.included_full_content)

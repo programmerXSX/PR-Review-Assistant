@@ -1,7 +1,16 @@
 """FastAPI 入口 —— 暴露 REST API 供 Streamlit 前端调用。
 
-启动命令:
+启动方式（先激活 venv）:
+
+    # 在项目根目录执行:
+    .venv/Scripts/activate
+    cd ai-pr-review
     uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
+
+    # 或不用 activate，直接用 venv 里的 python:
+    ../.venv/Scripts/python.exe -m uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
+
+    ⚠ 若 --reload 报错（Python 3.13 + Windows 的 watchfiles 兼容问题），可先去掉 --reload。
 
 端点:
     GET  /api/health  →  健康检查
@@ -9,14 +18,6 @@
 """
 
 from __future__ import annotations
-
-import sys
-from pathlib import Path
-
-# 确保 from backend.xxx 导入在任何运行方式下都可用
-_PROJECT_ROOT = str(Path(__file__).resolve().parent.parent)
-if _PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, _PROJECT_ROOT)
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware

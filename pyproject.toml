@@ -1,0 +1,15 @@
+[project]
+name = "pr-review-assistant"
+version = "0.1.0"
+description = "AI PR Review Assistant — 粘贴公开 GitHub PR URL，自动抓取变更并调用 DeepSeek V4 产出变更总结 + 结构化风险 Findings"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "streamlit",
+    "openai",
+    "httpx",
+    "pydantic>=2",
+    "python-dotenv",
+    "requests",
+]

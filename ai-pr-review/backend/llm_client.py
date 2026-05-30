@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from openai import OpenAI
 
-from backend.config import get_settings
+from config import get_settings
 
 # ======================================================================
 # 异常

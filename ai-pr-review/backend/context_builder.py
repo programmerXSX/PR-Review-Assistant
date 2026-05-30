@@ -10,12 +10,12 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-from backend.config import Settings
-from backend.models import FileMeta
+from config import Settings
+from models import FileMeta
 
 if TYPE_CHECKING:
-    from backend.github_client import GitHubClient
-    from backend.models import ChangedFile
+    from github_client import GitHubClient
+    from models import ChangedFile
 
 
 # ======================================================================
@@ -371,8 +371,8 @@ def _append_file_section(
 if __name__ == "__main__":
     import textwrap
 
-    from backend.config import get_settings
-    from backend.github_client import GitHubClient, parse_pr_url
+    from config import get_settings
+    from github_client import GitHubClient, parse_pr_url
 
     TEST_URL = "https://github.com/psf/requests/pull/6702"
 

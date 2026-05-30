@@ -19,7 +19,7 @@ from __future__ import annotations
 import json
 import re
 
-from backend.models import Finding
+from models import Finding
 
 # ---------------------------------------------------------------------------
 # 常量

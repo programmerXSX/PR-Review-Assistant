@@ -33,8 +33,11 @@
 ### 1. 安装依赖
 
 ```bash
-cd ai-pr-review
-pip install -r requirements.txt
+# 先激活虚拟环境（Windows）:
+.venv\Scripts\activate
+
+# macOS / Linux:
+source .venv/bin/activate
 ```
 
 ### 2. 配置
@@ -53,23 +56,51 @@ DEEPSEEK_API_KEY=sk-your-key-here
 
 ### 3. 启动
 
+**第一步：激活虚拟环境**
+
+```bash
+# Windows PowerShell / cmd（在项目根目录 E:\LLM\PR_Review_Assistant 执行）:
+.venv\Scripts\activate
+
+# macOS / Linux:
+source .venv/bin/activate
+```
+
+**第二步：同步依赖库，项目由uv管理：**
+```bash
+# 执行
+uv sync
+```
+
+> 如果不想每次手动激活，也可以跳过这一步，直接用 venv 里的 python 替代 `uvicorn` / `streamlit` 命令（见下方备选方式）。
+
+**第二步：分别启动后端和前端**
+
 终端 1 — 后端：
 
 ```bash
-cd ai-pr-review
-uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
+cd ai-pr-review  #进入项目文件夹
+uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000 # 启动后端
 ```
 
 终端 2 — 前端：
 
 ```bash
-cd ai-pr-review
-streamlit run frontend/app.py
+cd ai-pr-review  #进入项目文件夹
+streamlit run frontend/app.py  # 启动前端
 ```
 
 打开 <http://localhost:8501>。
 
-> **Windows 注意**：启动命令必须在 `ai-pr-review/` 目录下执行，否则 Python 找不到 `backend` 包。
+> **备选方式（无需手动激活 venv）**：用 venv 内的 python 直接启动，效果相同:
+>
+> ```bash
+> cd ai-pr-review
+> ..\.venv\Scripts\python.exe -m uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000   # 后端
+> ..\.venv\Scripts\python.exe -m streamlit run frontend/app.py                                     # 前端
+> ```
+>
+> **Windows 注意**：所有命令必须在 `ai-pr-review/` 目录下执行，否则 Python 找不到 `backend` 包。
 
 ---
 

@@ -17,8 +17,8 @@ from typing import Tuple
 
 import httpx
 
-from backend.config import get_settings
-from backend.models import ChangedFile
+from config import get_settings
+from models import ChangedFile
 
 # ---------------------------------------------------------------------------
 # URL 解析

@@ -23,10 +23,10 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from backend.github_client import GitHubAPIError
-from backend.llm_client import LLMError
-from backend.models import ReviewRequest, ReviewResponse
-from backend.orchestrator import run_review
+from github_client import GitHubAPIError
+from llm_client import LLMError
+from models import ReviewRequest, ReviewResponse
+from orchestrator import run_review
 
 # ======================================================================
 # 应用

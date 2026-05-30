@@ -38,10 +38,6 @@
 
 # macOS / Linux:
 source .venv/bin/activate
-
-# 然后安装:
-cd ai-pr-review
-pip install -r requirements.txt
 ```
 
 ### 2. 配置
@@ -70,6 +66,12 @@ DEEPSEEK_API_KEY=sk-your-key-here
 source .venv/bin/activate
 ```
 
+**第二步：同步依赖库，项目由uv管理：**
+```bash
+# 执行
+uv sync
+```
+
 > 如果不想每次手动激活，也可以跳过这一步，直接用 venv 里的 python 替代 `uvicorn` / `streamlit` 命令（见下方备选方式）。
 
 **第二步：分别启动后端和前端**
@@ -77,15 +79,15 @@ source .venv/bin/activate
 终端 1 — 后端：
 
 ```bash
-cd ai-pr-review
-uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
+cd ai-pr-review  #进入项目文件夹
+uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000 # 启动后端
 ```
 
 终端 2 — 前端：
 
 ```bash
-cd ai-pr-review
-streamlit run frontend/app.py
+cd ai-pr-review  #进入项目文件夹
+streamlit run frontend/app.py  # 启动前端
 ```
 
 打开 <http://localhost:8501>。

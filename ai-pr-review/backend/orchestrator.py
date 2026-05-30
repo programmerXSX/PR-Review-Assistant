@@ -13,13 +13,13 @@ from __future__ import annotations
 import asyncio
 import time
 
-from aggregator import parse_findings
-from config import get_settings
-from context_builder import build_context
-from github_client import GitHubClient, GitHubAPIError, parse_pr_url
-from llm_client import call_model, LLMError
-from models import Finding, ReviewRequest, ReviewResponse
-from prompts import FINDINGS_SYSTEM, SUMMARY_SYSTEM
+from backend.aggregator import parse_findings
+from backend.config import get_settings
+from backend.context_builder import build_context
+from backend.github_client import GitHubClient, GitHubAPIError, parse_pr_url
+from backend.llm_client import call_model, LLMError
+from backend.models import Finding, ReviewRequest, ReviewResponse
+from backend.prompts import FINDINGS_SYSTEM, SUMMARY_SYSTEM
 
 
 # ======================================================================

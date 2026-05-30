@@ -10,12 +10,12 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-from config import Settings
-from models import FileMeta
+from backend.config import Settings
+from backend.models import FileMeta
 
 if TYPE_CHECKING:
-    from github_client import GitHubClient
-    from models import ChangedFile
+    from backend.github_client import GitHubClient
+    from backend.models import ChangedFile
 
 
 # ======================================================================

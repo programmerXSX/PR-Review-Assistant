@@ -13,20 +13,70 @@
     ⚠ 若 --reload 报错（Python 3.13 + Windows 的 watchfiles 兼容问题），可先去掉 --reload。
 
 端点:
-    GET  /api/health  →  健康检查
-    POST /api/review  →  PR 审查（同步阻塞，最长需数十秒）
+    GET  /api/health   →  健康检查
+    POST /api/review   →  PR 审查（同步阻塞，最长需数十秒）
+    GET  /api/history  →  获取历史 PR URL 列表
+    POST /api/history  →  追加一条 PR URL 到历史记录
 """
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field
 
-from github_client import GitHubAPIError
-from llm_client import LLMError
-from models import ReviewRequest, ReviewResponse
-from orchestrator import run_review
+from backend.github_client import GitHubAPIError
+from backend.llm_client import LLMError
+from backend.models import ReviewRequest, ReviewResponse
+from backend.orchestrator import run_review
+
+# ======================================================================
+# 历史记录存储（内存 + JSON 文件）
+# ======================================================================
+
+_RECORDS_PATH = Path(__file__).resolve().parent / "records.json"
+_MAX_HISTORY = 50  # 最多保留条数
+
+
+def _load_history() -> list[str]:
+    """从 records.json 加载历史 PR URL 列表（最近在前）。"""
+    try:
+        if _RECORDS_PATH.exists():
+            data = json.loads(_RECORDS_PATH.read_text(encoding="utf-8"))
+            if isinstance(data, list):
+                return [item for item in data if isinstance(item, str)]
+    except Exception:
+        pass
+    return []
+
+
+def _save_history(urls: list[str]) -> None:
+    """将 URL 列表写入 records.json。"""
+    _RECORDS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    _RECORDS_PATH.write_text(
+        json.dumps(urls[:_MAX_HISTORY], ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+
+def _add_to_history(pr_url: str) -> list[str]:
+    """添加一条 PR URL 到历史（去重、最近在前、上限裁剪）。"""
+    urls = _load_history()
+    urls = [u for u in urls if u != pr_url]
+    urls.insert(0, pr_url)
+    urls = urls[:_MAX_HISTORY]
+    _save_history(urls)
+    return urls
+
+
+# ---- 请求模型 ----
+class HistoryEntry(BaseModel):
+    pr_url: str = Field(..., description="PR URL")
+
 
 # ======================================================================
 # 应用
@@ -41,7 +91,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:8501",   # Streamlit 默认端口
+        "http://localhost:8501",
         "http://localhost:8502",
         "http://127.0.0.1:8501",
         "http://127.0.0.1:8502",
@@ -111,6 +161,19 @@ async def review_pr(req: ReviewRequest):
     return await run_review(req)
 
 
+@app.get("/api/history")
+async def get_history():
+    """返回历史 PR URL 列表（最近在前）。"""
+    return {"history": _load_history()}
+
+
+@app.post("/api/history")
+async def add_history(entry: HistoryEntry):
+    """追加一条 PR URL 到历史记录。"""
+    updated = _add_to_history(entry.pr_url)
+    return {"history": updated, "count": len(updated)}
+
+
 # ======================================================================
 # 自测（仅直接运行时）
 # ======================================================================
@@ -120,5 +183,6 @@ if __name__ == "__main__":
     print("启动 FastAPI 服务: http://localhost:8000")
     print("  健康检查: http://localhost:8000/api/health")
     print("  审查接口: POST http://localhost:8000/api/review")
+    print("  历史记录: GET/POST http://localhost:8000/api/history")
     print()
     uvicorn.run("backend.main:app", host="0.0.0.0", port=8000, reload=True)

@@ -56,17 +56,8 @@ DEEPSEEK_API_KEY=sk-your-key-here
 
 ### 3. 启动
 
-**第一步：激活虚拟环境**
 
-```bash
-# Windows PowerShell / cmd（在项目根目录 E:\LLM\PR_Review_Assistant 执行）:
-.venv\Scripts\activate
-
-# macOS / Linux:
-source .venv/bin/activate
-```
-
-**第二步：同步依赖库，项目由uv管理：**
+**第一步：同步依赖库，项目由uv管理：**
 ```bash
 # 执行
 uv sync

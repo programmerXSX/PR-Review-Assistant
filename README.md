@@ -3,6 +3,11 @@
 > 粘贴一个公开 GitHub PR 链接，AI 自动分析变更，输出 **变更总结 + 结构化风险 Findings + 修改建议**。
 
 ---
+### 项目功能演示视频地址：
+```properties
+bilibili地址: https://www.bilibili.com/video/BV1XeVn62ExN/
+streamable地址: https://streamable.com/jg8cuo
+```
 
 ## 功能
 

@@ -4,8 +4,12 @@
 
 ---
 ### 项目功能演示视频地址：
+bilibili地址: 
 ```properties
-bilibili地址: https://www.bilibili.com/video/BV1XeVn62ExN/
+https://www.bilibili.com/video/BV1XeVn62ExN/
+```
+streamable地址:
+```properties
 streamable地址: https://streamable.com/jg8cuo
 ```
 
